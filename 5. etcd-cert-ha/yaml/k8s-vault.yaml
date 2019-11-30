@@ -1,0 +1,150 @@
+#-------------------------------------NAMESPACE----------------------
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: bco-vault
+#-------------------------------------DEPLOYMENT---------------------
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: bco-vault-dc
+  namespace: bco-vault
+  labels:
+    app: bco-vault-lb
+    balancer: vault
+spec:
+  strategy:
+    type: RollingUpdate
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: bco-vault-lb
+        balancer: vault
+    spec:
+      containers:
+      - image: agustincharry/bco-vault:etcd-cert-ha
+        name: bco-vault
+        imagePullPolicy: Always
+        env:
+        - name: VAULT_API_ADDR
+          value: "https://bco-vault-sv:8200"
+        - name: VAULT_ADDR
+          value: "https://bco-vault-sv:8200"
+        - name: VAULT_CLUSTER_ADDR
+          value: "https://bco-vault-sv:8201"
+        - name: VAULT_SKIP_VERIFY
+          value: "true"
+        - name: ETCD_ADDR
+          value: http://etcd-client:2379
+        - name: ETCD_HA_ENABLED
+          value: "true"
+        ports:
+        - name: http
+          containerPort: 8200
+        - name: cluster
+          containerPort: 8201
+#--------------------------------------SERVICE-----------------------
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bco-vault-sv
+  namespace: bco-vault
+spec:
+  type: NodePort
+  ports:
+  - name: http
+    port: 8200
+    targetPort: 8200
+    nodePort: 30200
+  - name: cluster
+    port: 8201
+    targetPort: 8201
+    nodePort: 30201
+  selector:
+    app: bco-vault-lb
+#-------------------------------------DEPLOYMENT---------------------
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: bco-vault-dc2
+  namespace: bco-vault
+  labels:
+    app: bco-vault-lb2
+    balancer: vault
+spec:
+  strategy:
+    type: RollingUpdate
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: bco-vault-lb2
+        balancer: vault
+    spec:
+      containers:
+      - image: agustincharry/bco-vault:etcd-cert-ha
+        name: bco-vault2
+        imagePullPolicy: Always
+        env:
+        - name: VAULT_API_ADDR
+          value: "https://bco-vault-sv2:8200"
+        - name: VAULT_ADDR
+          value: "https://bco-vault-sv2:8200"
+        - name: VAULT_CLUSTER_ADDR
+          value: "https://bco-vault-sv2:8201"
+        - name: VAULT_SKIP_VERIFY
+          value: "true"
+        - name: ETCD_ADDR
+          value: http://etcd-client:2379
+        - name: ETCD_HA_ENABLED
+          value: "true"
+        ports:
+        - name: http
+          containerPort: 8200
+        - name: cluster
+          containerPort: 8201
+#--------------------------------------SERVICE-----------------------
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bco-vault-sv2
+  namespace: bco-vault
+spec:
+  type: NodePort
+  ports:
+  - name: http
+    port: 8200
+    targetPort: 8200
+    nodePort: 30300
+  - name: cluster
+    port: 8201
+    targetPort: 8201
+    nodePort: 30301
+  selector:
+    app: bco-vault-lb2
+#--------------------------------------SERVICE-----------------------
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bco-vault-sv-loadbalancer
+  namespace: bco-vault
+spec:
+  type: LoadBalancer
+  ports:
+  - name: http
+    port: 8200
+    targetPort: 8200
+    nodePort: 30400
+  - name: cluster
+    port: 8201
+    targetPort: 8201
+    nodePort: 30401
+  selector:
+    balancer: vault

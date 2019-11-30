@@ -1,0 +1,7 @@
+Usuarios y permisos
+https://blog.openshift.com/understanding-service-accounts-sccs/
+
+
+Vault Openshift
+https://blog.openshift.com/managing-secrets-openshift-vault-integration/
+https://github.com/raffaelespazzoli/credscontroller

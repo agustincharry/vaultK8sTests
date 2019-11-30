@@ -1,0 +1,83 @@
+# https://github.com/etcd-io/etcd/tree/master/hack/kubernetes-deploy
+#--------------------------------------SERVICE-----------------------
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: etcd-client
+spec:
+  ports:
+  - name: etcd-client-port
+    port: 2379
+    protocol: TCP
+    targetPort: 2379
+  selector:
+    app: etcd
+#--------------------------------------SERVICE-----------------------
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    etcd_node: etcd0
+  name: etcd0
+spec:
+  ports:
+  - name: client
+    port: 2379
+    protocol: TCP
+    targetPort: 2379
+  - name: server
+    port: 2380
+    protocol: TCP
+    targetPort: 2380
+  selector:
+    etcd_node: etcd0
+#-------------------------------------DEPLOYMENT---------------------
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: etcd0
+  labels:
+    app: etcd
+    etcd_node: etcd0
+spec:
+  strategy:
+    type: RollingUpdate
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: etcd
+        etcd_node: etcd0
+    spec:
+      containers:
+      - image: docker-registry.default.svc:5000/my-test/etcd:3.3
+        name: etcd0
+        ports:
+        - containerPort: 2379
+          name: client
+          protocol: TCP
+        - containerPort: 2380
+          name: server
+          protocol: TCP
+        restartPolicy: Always
+        command:
+        - /usr/local/bin/etcd
+        - --name
+        - etcd0
+        - '--data-dir'
+        - /etcd/vault
+        - --initial-advertise-peer-urls
+        - http://etcd0:2380
+        - --listen-peer-urls
+        - http://0.0.0.0:2380
+        - --listen-client-urls
+        - http://0.0.0.0:2379
+        - --advertise-client-urls
+        - http://etcd0:2379
+        - --initial-cluster
+        - etcd0=http://etcd0:2380
+        - --initial-cluster-state
+        - new

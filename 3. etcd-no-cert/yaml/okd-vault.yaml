@@ -1,0 +1,72 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: bco-vault-dc
+  labels:
+    app: bco-vault-lb
+spec:
+  strategy:
+    type: RollingUpdate
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: bco-vault-lb
+    spec:
+      containers:
+      - image: agustincharry/bco-vault:etcd-no-cert
+        name: bco-vault
+        env:
+        - name: VAULT_API_ADDR
+          value: "https://192.168.99.101:30200"
+        - name: VAULT_ADDR
+          value: "https://192.168.99.101:30200"
+        - name: VAULT_CLUSTER_ADDR
+          value: "https://192.168.99.101:30201"
+        - name: VAULT_SKIP_VERIFY
+          value: "true"
+        ports:
+        - name: http
+          containerPort: 8200
+        - name: cluster
+          containerPort: 8201
+        volumeMounts:
+        - name: vault-persistent-storage
+          mountPath: /vault-data
+      volumes:
+      - name: vault-persistent-storage
+        persistentVolumeClaim:
+          claimName: vault-pv-claim
+#--------------------------------------SERVICE-----------------------
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bco-vault-sv
+spec:
+  type: LoadBalancer
+  ports:
+  - name: http
+    port: 8200
+    targetPort: 8200
+    nodePort: 30200
+  - name: cluster
+    port: 8201
+    targetPort: 8201
+    nodePort: 30201
+  selector:
+    app: bco-vault-lb
+#---------------------------------------VOLUME-----------------------
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vault-pv-claim
+  labels:
+    app: bco-vault-lb
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi

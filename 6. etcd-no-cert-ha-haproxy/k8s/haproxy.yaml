@@ -1,0 +1,47 @@
+#-------------------------------------NAMESPACE----------------------
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: bco-vault
+#-------------------------------------DEPLOYMENT---------------------
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: haproxy-dc
+  namespace: bco-vault
+  labels:
+    app: haproxy
+spec:
+  strategy:
+    type: RollingUpdate
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: haproxy
+    spec:
+      containers:
+      - image: agustincharry/vault_balancer:haproxy
+        name: haproxy
+        imagePullPolicy: Always
+        ports:
+        - name: http
+          containerPort: 80
+#--------------------------------------SERVICE-----------------------
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: haproxy
+  namespace: bco-vault
+spec:
+  type: LoadBalancer
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    nodePort: 30400
+  selector:
+    app: haproxy
